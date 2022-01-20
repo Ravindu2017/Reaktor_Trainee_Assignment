@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Reaktor Submission</title>
+</head>
+
+<body>
+    <div id="wullale">
+        <p id="dolp"></p>
+        <div id="stock"></div>
+        <div id="results"></div>
+        <div id="stats"></div>
+        <div id="answer"></div>
+        <h2>Current Matches</h2>
+        <div id="current_matches"></div>
+    </div>
+    <p>
+        <script>
+            window.onload = function () {
+                //let socket = new WebSocket("wss://javascript.info/article/websocket/demo/hello");
+                let socket = new WebSocket("wss://bad-api-assignment.reaktor.com/rps/live");
+                socket.binaryType = "arraybuffer"
+                socket.onopen = function (e) {
+                    alert("[open] Connection established");
+                    //alert("Sending to server");
+                    //socket.send("My name is John");
+                };
+
+                socket.onmessage = function (event) {
+                    //alert(`[message] Data received from server: ${event.data}`);
+                    socketInfo(event.data)
+                };
+
+                socket.onclose = function (event) {
+                    if (event.wasClean) {
+                        alert(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+                    } else {
+                        // e.g. server process killed or network down
+                        // event.code is usually 1006 in this case
+                        alert('[close] Connection died');
+                    }
+                };
+
+                socket.onerror = function (error) {
+                    alert(`[error] ${error.message}`);
+                };
+
+                //Refresh page every 10 seconds
+                //so information is not outdated
+                window.setTimeout(function () {
+                    window.location.reload();
+                }, 60000);
+
+                //API: https://bad-api-assignment.reaktor.com/rps/history
+
+                //Used the github repo by Rob Wu
+                //https://github.com/Rob--W/cors-anywhere to bypass the CORS request
+                //Trying to access the API resources
+                fetch('https://salty-oasis-86697.herokuapp.com/https://bad-api-assignment.reaktor.com/rps/history')
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (response) {
+                        //Fill information from API into four categories
+                        //Player 1, Player 2, and their respective hands/choices
+                        //for the game (ROCK, PAPER, SCISSORS)
+                        let player_a = (function () {
+                            let playerA = []
+                            for (let i = 0; i < response.data.length; i++) {
+                                playerA.push(response.data[i].playerA.name)
+                            }
+                            return playerA
+                        })();
+                        let player_a_hand = (function () {
+                            let playerA_hand = []
+                            for (let i = 0; i < response.data.length; i++) {
+                                playerA_hand.push(response.data[i].playerA.played)
+                            }
+                            return playerA_hand
+                        })();
+                        let player_b = (function () {
+                            let playerB = []
+                            for (let i = 0; i < response.data.length; i++) {
+                                playerB.push(response.data[i].playerB.name)
+                            }
+                            return playerB
+                        })();
+                        let player_b_hand = (function () {
+                            let playerB_hand = []
+                            for (let i = 0; i < response.data.length; i++) {
+                                playerB_hand.push(response.data[i].playerB.played)
+                            }
+                            return playerB_hand
+                        })();
+                        //Gather all unique names
+                        let player_names = unique(player_a, player_b)
+                        //Create buttons for every player and pass other essential input
+                        addMe(player_names, player_a, player_a_hand, player_b, player_b_hand)
+                    });
+
+                function socketInfo(information) {
+                    //Assign parent element anchor
+                    //let parent = document.getElementById("dolp");
+
+
+                    /*Write out the game information in paragraph HTML element
+                    for (let i = 0; i < bob.length; i = i + 4) {
+                        let para = document.createElement("p")
+                        para.innerHTML = bob[i] + " " + bob[i + 1] + " " + bob[i + 2] + " " + bob[i + 3]
+                        parent.append(para)
+                    }*/
+                    console.log(information)
+                    let stats = document.getElementById("current_matches")
+                    let server_info = ""
+                    server_info = information
+                    //bunda = JSON.stringify(information)
+                    let matches = ""
+                    //ender = JSON.parse(information)
+                    matches = JSON.parse(server_info);
+                    matches = JSON.parse(matches)
+                    // ERASE THIS --> stats.innerHTML = typeof (ender) + " " + typeof (bunda) + ender + ender.type + ender.playerA.name
+                    //stats.innerHTML = typeof (matches) + " " + typeof (server_info) + matches + matches.type + matches.playerA.name
+                    if (typeof matches.playerA.played === "undefined") {
+                        stats.innerHTML = matches.playerA.name + " " + matches.playerB.name
+                    }
+                    else {
+                        stats.innerHTML = matches.playerA.name + ": " + matches.playerA.played + "   " + matches.playerB.name + ": " + matches.playerB.played //+ server_info
+                    }
+
+                    //"Player Name: " + player_name + " Wins: " + info[0] + " Losses: " + info[1] + " Ties:  " + info[2] + " Win Ratio: " + info[3] + " Matches Played: " + info[4] + " Most Played Hand: " + info[5]
+                }
+
+                //Function for presenting information once a player is clicked
+                function myFunction(player_name, player1, player1_hand, player2, player2_hand) {
+                    //Assign parent element anchor
+                    let parent = document.getElementById("answer");
+                    let info = play_game(player_name, player1, player1_hand, player2, player2_hand)
+                    //bob is the gameplay holding information of player one, player one's choice, player two, and player two's choice
+                    let bob = info[6]
+
+                    //Write out the game information in paragraph HTML element
+                    for (let i = 0; i < bob.length; i = i + 4) {
+                        let para = document.createElement("p")
+                        para.innerHTML = bob[i] + " " + bob[i + 1] + " " + bob[i + 2] + " " + bob[i + 3]
+                        parent.append(para)
+                    }
+                    let stats = document.getElementById("stats")
+                    stats.innerHTML = "Player Name: " + player_name + " Wins: " + info[0] + " Losses: " + info[1] + " Ties:  " + info[2] + " Win Ratio: " + info[3] + " Matches Played: " + info[4] + " Most Played Hand: " + info[5]
+                }
+
+
+                //Function for presenting unique player names as button
+                //Once clicked their respective information will be shown
+                function addMe(players, player1, player1_hand, player2, player2_hand) {
+                    let parent = document.getElementById("stock");
+
+                    let elem = []
+                    for (let i = 0; i < players.length; i++) {
+                        let buttonz = document.createElement("button")
+                        //Create buttons for each player
+                        buttonz.innerHTML = players[i]
+                        buttonz.id = players[i]
+
+                        //let check = document.getElementById(players[i])
+
+                        //Use parent element as anchor to display the buttons
+                        //for each player
+                        parent.appendChild(buttonz)
+                    }
+
+                    //For each player assign an event listener for clicks
+                    for (let i = 0; i < players.length; i++) {
+                        (function () {
+                            elem.push(document.getElementById(players[i]))
+                            elem[i].addEventListener("click", function () { myFunction(players[i], player1, player1_hand, player2, player2_hand); }, false);
+                        }());
+                    }
+
+                }
+
+                /*function showStats(player_name) {
+                    console.log("hey", player_name)
+                }*/
+
+                //Get game stats for the player selected (button clicked)
+                function play_game(name, player_one, player_one_hand, player_two, player_two_hand) {
+                    let player_a = player_one;
+                    let player_b = player_two;
+                    let player_a_hand = player_one_hand;
+                    let player_b_hand = player_two_hand;
+                    let count = 0
+                    let wins = 0
+                    let win_ratio = 0
+                    let ties = 0
+                    let losses = 0
+                    //let opponent_play = ""
+                    let choice = ["ROCK", "PAPER", "SCISSORS"]
+                    let most_hand = []
+                    let gameplay = []
+
+                    //Iterate through the list of all games using length of "player a" array
+                    for (let i = 0; i < player_a.length; i++) {
+                        //We take stats from player_a if they are our player
+                        if (name === player_a[i]) {
+                            //Store all the game choices
+                            most_hand.push(player_a_hand[i])
+                            //count matches played
+                            count++
+                            //opponent_play = player_b_hand[i]
+                            //Store the players' names and their respective choices
+                            gameplay.push(player_a[i], player_a_hand[i], player_b[i], player_b_hand[i])
+
+                            //Tie if both choices are same
+                            if (player_a_hand[i] === player_b_hand[i]) {
+                                ties++
+                            }
+
+                            else if (player_a_hand[i] === "SCISSORS" && player_b_hand[i] === "ROCK") {
+                                losses++
+                            }
+
+                            //Mapping choices, scissors were exception so it has an explicit condtion statement 
+                            else if ((choice.indexOf(player_b_hand[i]) + 2) % (choice.indexOf(player_a_hand[i]) + 2) === 1) {
+                                losses++
+                            }
+
+                            else {
+                                wins++
+                            }
+
+                        }
+
+                        //We take stats from player_b if they are our player
+                        else if (name === player_b[i]) {
+                            most_hand.push(player_b_hand[i])
+                            count++
+                            //opponent_play = player_a_hand[i]
+                            gameplay.push(player_a[i], player_a_hand[i], player_b[i], player_b_hand[i])
+                            if (player_a_hand[i] === player_b_hand[i]) {
+                                ties++
+                            }
+
+                            else if (player_b_hand[i] === "SCISSORS" && player_a_hand[i] === "ROCK") {
+                                losses++
+                            }
+
+                            else if ((choice.indexOf(player_a_hand[i]) + 2) % (choice.indexOf(player_b_hand[i]) + 2) === 1) {
+                                losses++
+                            }
+
+                            else {
+                                wins++
+                            }
+
+
+
+
+                        }
+
+
+                    }
+
+                    //Source of code: https://stackoverflow.com/questions/1053843/get-the-element-with-the-highest-occurrence-in-an-array?page=1&tab=votes#tab-top
+                    function mode(array) {
+                        if (array.length == 0)
+                            return null;
+                        var modeMap = {};
+                        var maxEl = array[0], maxCount = 1;
+                        for (var i = 0; i < array.length; i++) {
+                            var el = array[i];
+                            if (modeMap[el] == null)
+                                modeMap[el] = 1;
+                            else
+                                modeMap[el]++;
+                            if (modeMap[el] > maxCount) {
+                                maxEl = el;
+                                maxCount = modeMap[el];
+                            }
+                        }
+                        return maxEl;
+                    }
+
+                    let freq = ""
+                    freq = mode(most_hand)
+                    win_ratio = wins / (wins + losses + ties)
+
+
+                    return [wins, losses, ties, win_ratio, count, freq, gameplay]
+
+                }
+
+                //Also sourced from StackOverflow
+                function unique(player_1, player_2) {
+                    var a = player_1
+                    var b = player_2
+                    var c = a.concat(b)
+
+                    let unique_c = [... new Set(c)]
+
+                    return unique_c
+                }
+            };
+        </script>
+</body>
+
+</html>
